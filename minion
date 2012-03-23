@@ -239,6 +239,7 @@ meta::meta('type::state', <<'__');
 meta::configure 'state', inherit => 0, extension => '.pl';
 meta::define_form 'state', \&meta::bootstrap::implementation;
 __
+meta::alias('er', 'edit sdoc::readme');
 meta::bootstrap('html', <<'__');
 <html>
   <head>
@@ -1453,6 +1454,23 @@ several tasks:
 
   The 'minion' script is not stored in the minion account. Instead, it's stored in the account you will use to administer the system, and the administrative user has read/write access to it.
   The minion user has read-only access; this allows the minion user to execute several copies of the script simultaneously.
+
+Actions.
+Minion uses actions to change the state of a system. Actions have various semantics that you can assign, the most useful probably being idempotence within a given window of time. Each action
+is logged.
+
+  Replicate action.
+  Replicates a directory to all machines using rsync. Generally used as a backup mechanism.
+
+  Package update action.
+  Inspects the package list installed on a system and runs necessary yaourt commands to align that list with the 'desired package' list. If no differences are found, this command does a system
+  update after downloading packages from the authoritative server.
+
+  Configuration update action.
+  Scans all system configuration files for changes and reapplies patches. Patches must be idempotent!
+
+  Parallel action.
+  Performs the same action on all servers simultaneously.
 
 __
 internal::main();
