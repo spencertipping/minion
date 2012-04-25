@@ -1309,6 +1309,19 @@ return process->new($child_pid) if my $child_pid = fork;
 exit &$f(@args);
 
 __
+meta::internal_function('with_sshfs_mount', <<'__');
+my ($host, $f) = @_;
+my $mount_point = temporary_name();
+mkdir $mount_point or die "failed to create SSHFS mountpoint $mount_point";
+
+sh("sshfs '$host:/' '$mount_point'") and die 'nonzero exit code from SSHFS';
+my @result = dangerous('', sub {&$f($mount_point)});
+sh("fusermount -u '$mount_point'") and die "failed to unmount SSHFS from $mount_point";
+rmdir $mount_point or die "failed to clean up SSHFS mountpoint $mount_point";
+
+wantarray ? @result : $result[0];
+
+__
 meta::library('process', <<'__');
 package process;
 
@@ -1732,17 +1745,10 @@ meta::task('using', <<'__');
 my ($host, @command) = @_;
 @command = $ENV{SHELL} unless @command;
 
-my $temp_name = temporary_filename();
-my $cwd       = cwd();
-mkdir $temp_name or die "temporary file $temp_name is already in use";
-
-my $sshfs_process = with_fork(sub {sh("sshfs $host:/ $temp_name")});
-dangerous('', sub {with_cwd("$temp_name/$cwd", sub {sh(@command)})});
-
-$sshfs_process->kill();
-$sshfs_process->wait();
-
-rmdir $temp_name or die "could not clean up $temp_name";
+my $cwd = cwd();
+with_sshfs_mount($host, sub {
+  my ($mount_point) = @_;
+  with_cwd("$mount_point/$cwd", sub {sh(@command)})});
 
 __
 meta::template('comment', '\'\';     # A mechanism for line or block comments.');
