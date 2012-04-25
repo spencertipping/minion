@@ -1309,6 +1309,25 @@ return process->new($child_pid) if my $child_pid = fork;
 exit &$f(@args);
 
 __
+meta::internal_function('with_remote', <<'__');
+# Opens an SSH connection to the remote host and sets up an RPC to the remote
+# minion object. The remote minion instance is deleted at the end of the
+# session. Your callback is given a thunk that can be used to execute commands
+# remotely:
+#
+# sub {
+#   my ($run) = @_;
+#   my $remote_name = &$run('perl name()');     # stdout returned into $remote_name
+#   &$run("perl file::write('foo','bar')");     # no stdin/stdout redirection
+#   &$run("create data::bif", 'baz');           # string provided as stdin
+# }
+#
+# The remote instance is initialized as a clone of the current one.
+
+my ($host, $f) = @_;
+
+
+__
 meta::internal_function('with_sshfs_mount', <<'__');
 my ($host, $f) = @_;
 my $mount_point = temporary_name();
@@ -1742,6 +1761,8 @@ s/\s.*// for @lines;
 __
 meta::task('using', <<'__');
 # Usage: using [username@]host [command...]
+# Mounts a remote host's filesystem locally, then runs a command on the local
+# machine.
 my ($host, @command) = @_;
 @command = $ENV{SHELL} unless @command;
 
