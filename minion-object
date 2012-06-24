@@ -1033,6 +1033,10 @@ around_hook('update-from-invocation', separate_options(@_), sub {
 
 __
 meta::function('usage', '"Usage: $0 action [arguments]\\nUnique actions (run \'$0 ls\' to see all actions):" . ls(\'-u\');');
+meta::function('username', <<'__');
+strip(join '', qx|whoami|);
+
+__
 meta::function('verify', <<'__');
 file::write(my $other = $transient{temporary_filename} = temporary_name(), my $serialized_data = serialize());
 chomp(my $observed = join '', qx|perl '$other' state|);
@@ -1803,10 +1807,12 @@ my @needed = sort keys %needed;
 terminal::info("$host needs the following: @needed");
 
 my $hostname = hostname();
+my $username = username();
 
 create_deferred($host, 'yaourt-update-local', "sh('yaourt -Sy @needed')");
 create_deferred($host, 'download-packages',
-                "sh('sudo rsync $hostname:/var/cache/pacman/pkg/ /var/cache/pacman/pkg')");
+                # Explicit uesrname required because rsync runs as root
+                "sh('sudo rsync $username\@$hostname:/var/cache/pacman/pkg/ /var/cache/pacman/pkg')");
 
 __
 meta::task('transfer-root-fileslice-archive', <<'__');
