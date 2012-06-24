@@ -377,6 +377,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 __
+meta::data('permanent-identity', 'eabc6fd5b2359a34f31e9362a372f1bf');
 meta::function('ad', <<'__');
 my ($options, @paths) = separate_options(@_);
 @{$transient{path}} = () if $$options{-c};
@@ -1757,10 +1758,6 @@ my $copy = hypothetically(sub {
   serialize()});
 
 file::write("| ssh $target 'mkdir -p ~/bin && cat > ~/bin/minion && chmod 0700 ~/bin/minion'", $copy);
-
-__
-meta::task('pacman-install', <<'__');
-
 
 __
 meta::task('pacman-package-set', <<'__');
