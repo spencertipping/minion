@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # 99aeabc9ec7fe80b1b39f5e53dc7e49e      <- self-modifying Perl magic
-# state:  a0adfdbf5961563e6ac82e2e4d4e25bb
-# istate: 0649694e7f21943c3655a6395e8f10b6
+# state:  d83095003e8f851bc899c11caa431a48
+# istate: 5e3744d51564c0752fbb586e2590a7ba
 # id:     eabc6fd5b2359a34f31e9362a372f1bf
 
 # This is a self-modifying Perl file. I'm sorry you're viewing the source (it's
@@ -370,10 +370,10 @@ object 99aeabc9ec7fe80b1b39f5e53dc7e49e
 preprocessor 70dae4b46eb4e06798ec6f38d17d4c7b
 __
 meta::cache('parent-state', <<'__');
-6d91ceddac6a7eac8daeac1153e3cd59 39dc8a8464e828897474f99fe030a21b
-70dae4b46eb4e06798ec6f38d17d4c7b afce1a0fe6be2323931aa9029d0b640b
-99aeabc9ec7fe80b1b39f5e53dc7e49e cf7aa26661d190c3047ad4fd2bea91b0
-a1e8480e579614c01dabeecf0f963bcc d17762b11e9af22e437ec80c0b9169ad
+6d91ceddac6a7eac8daeac1153e3cd59 e8830d4cb79ce3b19fccbd981ea8840c
+70dae4b46eb4e06798ec6f38d17d4c7b ed720004df8f7759312bbd1733f2163f
+99aeabc9ec7fe80b1b39f5e53dc7e49e e135f46f17a58cb65737ea8917362c3e
+a1e8480e579614c01dabeecf0f963bcc 1552aff770e040d5affea7009216c85d
 __
 meta::data('author', <<'__');
 Spencer Tipping <spencer@spencertipping.com>
@@ -513,6 +513,33 @@ meta::function('extern', '&{$_[0]}(retrieve(@_[1 .. $#_]));');
 meta::function('files-in-fileslice', <<'__');
 map "'$_'", grep s/'/\\'/g || 1, parse_fileslice($_[0]);
 
+
+__
+meta::function('git-bundle-state', <<'__');
+my ($bundle_directory) = @_;
+my @repositories = grep -d "$_/.git", <$bundle_directory/*>;
+
+my %states;
+$states{$_} = git_commit_id($_) for @repositories;
+\%states;
+
+__
+meta::function('git-commit-id', <<'__');
+my ($repository_directory) = @_;
+
+die "no .git directory in $repository_directory" unless -d "$repository_directory/.git";
+my $head_symref = strip(file::read("$repository_directory/.git/HEAD"));
+
+die "$repository_directory: unrecognized HEAD: $head_symref" unless $head_symref =~ /^ref: (\S+)$/;
+my $symref          = $1;
+my $resolved_symref = "$repository_directory/.git/$symref";
+
+return strip(file::read($resolved_symref)) if -f $resolved_symref;
+
+# Otherwise, look for .git/info/refs and parse that.
+die "$repository_directory: no symref $symref or .git/info/refs" unless -f "$repository_directory/.git/info/refs";
+my @lines = grep s/^(\S+)\s+(\S+)$/\1/ && $2 eq $symref, split /\n\s*/, file::read("$repository_directory/.git/info/refs");
+$lines[0];
 
 __
 meta::function('grep', <<'__');
@@ -931,6 +958,11 @@ my @final_array = @{$partial ? \@attributes : [expanded_bootstrap(), @attributes
 join "\n", @final_array;
 
 __
+meta::function('serialize-git-bundle-state', <<'__');
+my $ref = git_bundle_state(@_);
+join ':', %$ref;
+
+__
 meta::function('serialize-single', <<'__');
 # Serializes a single attribute and optimizes for content.
 
@@ -1011,6 +1043,19 @@ sh("tar -cj @slice | ssh $$options{'--to'} '$unpack_command'");
 
 __
 meta::function('unlock', 'hook(\'unlock\', chmod_self(sub {$_[0] | 0200}));');
+meta::function('unsynced-git-repos', <<'__');
+my ($bundle_directory, $hostname) = @_;
+die 'must specify a hostname' unless $hostname;
+
+my %local_state = %{git_bundle_state($bundle_directory)};
+my %remote_state = split ':', join '', qx|ssh $hostname "./minion serialize-git-bundle-state '$bundle_directory'"|;
+
+my @diffs;
+$local_state{$_} eq $remote_state{$_} or push @diffs for keys %local_state;
+
+@diffs;
+
+__
 meta::function('update', <<'__');
 update_from(@_, grep s/^parent:://o, sort keys %data);
 
@@ -1052,12 +1097,14 @@ around_hook('update-from-invocation', separate_options(@_), sub {
       my $identity = $parent_id_cache{$target} ||= $parent_metadata{id} || join '', qx($target identity);
       next if $already_seen{$identity} || $parent_state_cache{$identity} eq $parent_metadata{istate};
 
-      ++$already_seen{$identity};
-      $parent_state_cache{$identity} = $parent_metadata{istate} || join '', qx($target state -iG);
-
       my $attributes = join '', qx($target ls -ahiu);
       my %divergent;
       die "skipping unreachable $target" unless $attributes;
+
+      # These need to come after the reachability check so that we retry against
+      # other copies in case something fails.
+      ++$already_seen{$identity};
+      $parent_state_cache{$identity} = $parent_metadata{istate} || join '', qx($target state -iG);
 
       for my $to_rm (split /\n/, retrieve("parent::$target")) {
         my ($name, $hash) = split(/\s+/, $to_rm);
@@ -1581,7 +1628,7 @@ function::state                         ef2051d9fe0684044d0f3df752e0c949
 function::touch                         3991b1b7c7187566f50e5e58ce01fa06
 function::unlock                        b4aac02f7f3fb700acf4acfd9b180ceb
 function::update                        ac391dc90e507e7586c81850e7c2ecdd
-function::update-from                   fb2e2a5050f092b0240e2badb78519f7
+function::update-from                   6d72dd26078dd6ef11dbb021bd3d4997
 function::usage                         5bdd370f5a56cfbf199e08d398091444
 function::verify                        0c0cc1dfeab7d705919df122f7850a4f
 indicator::cc                           3db7509c521ee6abfedd33d5f0148ed3
@@ -1659,7 +1706,7 @@ function::sdoc-packed                    8ec4975fca7228708baae6ccd241bdbf
 function::sdocp                          c3d738d982ba87418a298ff58478a85b
 meta::type::sdoc                         22cd7315641d38c9d536344e83c36bed
 meta::type::slibrary                     95474943c4a5f8ff17d3cf66ddb7c386
-parent::/home/spencertipping/bin/object  579ee8f6e2d7aacc2db92517bf6733ba
+parent::/home/spencertipping/bin/object  d17a2788c38cb39ee966010e8752d49e
 retriever::code-sdoc                     03b87ff8d1ecf7594db9ca0669fc69a1
 retriever::html-sdoc                     8ab7705d03276945b23a71677153233c
 retriever::markdown-sdoc                 67c34ba8223ec36a3ae018e411354db2
@@ -1670,7 +1717,7 @@ retriever::sdocp                         fcfcf3a7de79d7d863402b9ccfcac3c4
 __
 meta::parent('log', <<'__');
 meta::type::log                          c11b43065a2c79d9473d0fa89a53d616
-parent::/home/spencertipping/bin/object  579ee8f6e2d7aacc2db92517bf6733ba
+parent::/home/spencertipping/bin/object  d17a2788c38cb39ee966010e8752d49e
 
 __
 meta::parent('object', <<'__');
@@ -1801,7 +1848,7 @@ __
 meta::parent('preprocessor', <<'__');
 function::preprocess           ab5526a02ff417d4c162357dc327e7c4
 meta::type::template           bc4b0c80b5efc716b19e99b832c22bf3
-parent::object                 579ee8f6e2d7aacc2db92517bf6733ba
+parent::object                 d17a2788c38cb39ee966010e8752d49e
 retriever::pp                  3b5f5c5d30c5a04f72056dedaacfe7b7
 template::comment              dfe273d2dad3d8159b847545e4e5c309
 template::eval                 1a0e2124a05056be4abc11803883c294
