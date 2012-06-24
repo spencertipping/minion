@@ -686,6 +686,18 @@ for my $parent (@parents) {
                       : rm("parent::$parent")}
 
 __
+meta::function('rsync-directory', <<'__');
+my ($options, @directories) = separate_options(@_);
+die 'must specify at least one directory'        unless @directories;
+die 'must specify a destination host using --to' unless $$options{'--to'};
+
+my @quoted = map "'$_'", grep s/'/\\'/g || 1, @directories;
+my $compressed = $$options{'--no-zip'} ? '' : '-z';
+my $delete     = $$options{'--delete'} ? '--delete' : '';
+my $dry_run    = $$options{'--dry-run'} || $$options{'-n'} ? '-nv' : '';
+sh("rsync -aux $dry_run $delete $compressed $_/ $$options{'--to'}:$_") for @quoted;
+
+__
 meta::function('save', <<'__');
 around_hook('save', sub {dangerous('', sub {file::write($0, serialize('-V')); $transient{initial} = state()}) if verify()});
 
