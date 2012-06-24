@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # 99aeabc9ec7fe80b1b39f5e53dc7e49e      <- self-modifying Perl magic
-# state:  0ddb4dbcad1749f515bd0449c5a62669
-# istate: 087cfd367a358e237e07aef337dec98a
+# state:  109dfbf5bd1e96e494031111a16413eb
+# istate: d0b40a98e60a1c601a1265012e2e2a60
 # id:     eabc6fd5b2359a34f31e9362a372f1bf
 
 # This is a self-modifying Perl file. I'm sorry you're viewing the source (it's
@@ -372,7 +372,7 @@ __
 meta::cache('parent-state', <<'__');
 6d91ceddac6a7eac8daeac1153e3cd59 52e240d1b79ce3b17ac51cf6df23d9a3
 70dae4b46eb4e06798ec6f38d17d4c7b 84f33692e130af6c95c7782e3b4db1a3
-99aeabc9ec7fe80b1b39f5e53dc7e49e 86a38fb271818303a9958650b5ea29e5
+99aeabc9ec7fe80b1b39f5e53dc7e49e ec7516883f304201f36ea640e51d6bec
 a1e8480e579614c01dabeecf0f963bcc 65d7d4ea063a937ed5e8f308eaf5cbdf
 __
 meta::data('author', <<'__');
@@ -1363,8 +1363,8 @@ unshift @effective_argv, $function_name and $function_name = 'method_missing' un
 
 around_hook('main-function', $function_name, @effective_argv, sub {
   dangerous('', sub {
-    chomp(my $result = &$function_name(@effective_argv));
-    print "$result\n" if $result})});
+    chomp(my @result = &$function_name(@effective_argv));
+    print join("\n", @result), "\n" if @result})});
 
 save() unless state() eq $transient{initial};
 
@@ -1676,7 +1676,7 @@ internal_function::file::read           e647752332c8e05e81646a3ff98f9a8e
 internal_function::file::write          460e2343283eb9fd0e1815389f4e07e6
 internal_function::fnv_hash             c36d56f1e13a60ae427afc43ba025afc
 internal_function::hypothetically       b83e3f894a6df8623ccd370515dfd976
-internal_function::internal::main       12c18f86d766ffb67b8dc0572985bf98
+internal_function::internal::main       4bd4381e1e63689984066485ae399f91
 internal_function::invoke_editor_on     5eb976796f0ec172d6ec036116a2f41e
 internal_function::is_locked            da12ced6aa38295251f7e748ffd22925
 internal_function::namespace            784d2e96003550681a4ae02b8d6d0a27
@@ -1981,7 +1981,7 @@ __
 meta::task('yaourt-sync', <<'__');
 my ($host)          = @_;
 my @local_packages  = pacman_package_set();
-my @remote_packages = split /\n/, join '', qx|ssh $host './minion pacman-package-set'|;
+my @remote_packages = grep length, split /\n/, join '', qx|ssh $host './minion pacman-package-set'|;
 
 my %needed;
 ++$needed{$_}      for @local_packages;
@@ -1993,13 +1993,11 @@ terminal::info("$host needs the following: @needed");
 my $hostname = hostname();
 my $username = username();
 
-# Alphabetic ordering of the following is important.
-create_deferred($host, 'clean-yaourt', "sh('yaourt -Sc')");
+# Alphabetic ordering of the following is significant.
 create_deferred($host, 'download-packages',
                 # Explicit uesrname required because rsync runs as root
                 "sh('sudo rsync -auvx $username\@$hostname:/var/cache/pacman/pkg/ /var/cache/pacman/pkg')");
 
-create_deferred($host, 'yaourt-update-local', "sh('yaourt -U --needed /var/cache/pacman/pkg/*')");
 create_deferred($host, 'yaourt-update-remote', "sh('yaourt -Sy --needed @needed')");
 
 __
