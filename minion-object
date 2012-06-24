@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # 99aeabc9ec7fe80b1b39f5e53dc7e49e      <- self-modifying Perl magic
-# state:  d839c6c811340761481f8367d222f68d
-# istate: 6722bde094f65af8bf2f9693133c4d9e
+# state:  3476b39b5d11c2d81bbdb47dedcafbf6
+# istate: 5d5626c394f65af8bf2f9693eb39bbc5
 # id:     eabc6fd5b2359a34f31e9362a372f1bf
 
 # This is a self-modifying Perl file. I'm sorry you're viewing the source (it's
@@ -786,6 +786,8 @@ my $compressed = $$options{'--no-zip'} ? '' : '-z';
 my $delete     = $$options{'--delete'} ? '--delete' : '';
 my $verbose    = $$options{'--verbose'} || $$options{'-v'} ? '-v' : '';
 my $dry_run    = $$options{'--dry-run'} || $$options{'-n'} ? '-nv' : '';
+
+terminal::info("@quoted -> $$options{'--to'}");
 sh("rsync -aux $verbose $dry_run $delete $compressed $_/ $$options{'--to'}:$_") for @quoted;
 
 __
