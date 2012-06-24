@@ -1787,14 +1787,14 @@ __
 meta::task('sync-arch-packages', <<'__');
 my ($host)          = @_;
 my @local_packages  = pacman_package_set();
-my @remote_packages = split /\n/, join '', qx|ssh $host './minion pacman-package-set'|;
+my @remote_packages = split /\n/, join '', qx|ssh $host 'perl minion pacman-package-set'|;
 
 my %needed;
 ++$needed{$_}      for @local_packages;
 delete $needed{$_} for @remote_packages;
-my $needed = join ' ', sort keys %needed;
+my @needed = sort keys %needed;
 
-sh("ssh $host 'yaourt -S $needed'");
+sh("ssh $host 'yaourt -S @needed'");
 
 __
 meta::task('user-backup', <<'__');
