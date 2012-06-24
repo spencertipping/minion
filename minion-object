@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # 99aeabc9ec7fe80b1b39f5e53dc7e49e      <- self-modifying Perl magic
-# state:  3476b39b5d11c2d81bbdb47dedcafbf6
-# istate: 5d5626c394f65af8bf2f9693eb39bbc5
+# state:  5405fe6914f422e7cc4cd295e1e773b9
+# istate: 98a26fa2441552efe36552caeb8787e2
 # id:     eabc6fd5b2359a34f31e9362a372f1bf
 
 # This is a self-modifying Perl file. I'm sorry you're viewing the source (it's
@@ -1970,10 +1970,14 @@ terminal::info("$host needs the following: @needed");
 my $hostname = hostname();
 my $username = username();
 
-create_deferred($host, 'yaourt-update-local', "sh('yaourt -Sy @needed')");
+# Alphabetic ordering of the following is important.
+create_deferred($host, 'clean-yaourt', "sh('yaourt -Sc')");
 create_deferred($host, 'download-packages',
                 # Explicit uesrname required because rsync runs as root
                 "sh('sudo rsync -auvx $username\@$hostname:/var/cache/pacman/pkg/ /var/cache/pacman/pkg')");
+
+create_deferred($host, 'yaourt-update-local', "sh('yaourt -U --needed /var/cache/pacman/pkg/*')");
+create_deferred($host, 'yaourt-update-remote', "sh('yaourt -Sy --needed @needed')");
 
 __
 meta::task('yaourt-update', <<'__');
