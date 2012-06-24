@@ -117,6 +117,14 @@ meta::configure 'cache', inherit => 0;
 meta::define_form 'cache', \&meta::bootstrap::implementation;
 __
 meta::meta('type::data', 'meta::functor::editable \'data\', extension => \'\', inherit => 0, default => \'cat\';');
+meta::meta('type::deferred', <<'__');
+meta::configure 'deferred', extension => '.pl', inherit => 1;
+meta::define_form 'deferred', sub {
+  my ($name, $value) = @_;
+  meta::externalize $name, "deferred::$name", meta::eval_in("sub {\n$value\n}", "deferred::$name");
+};
+
+__
 meta::meta('type::fileslice', <<'__');
 meta::functor::editable 'fileslice', extension => '.sdoc', inherit => 1, default => 'edit';
 
@@ -432,6 +440,11 @@ around_hook('create', $name, $value, sub {
   edit($name) unless defined $value});
 
 __
+meta::function('create-deferred', <<'__');
+my ($hostname, $deferred_name, $contents) = @_;
+file::write("| ssh $hostname './minion import deferred::$deferred_name'", $contents);
+
+__
 meta::function('current-state', 'serialize(\'-pS\');');
 meta::function('cwd', <<'__');
 use Cwd qw/getcwd/;
@@ -513,6 +526,10 @@ dangerous('', sub {&$_(@args)}) for grep /^hook::${hook}::/, sort keys %data;
 @args;
 __
 meta::function('hooks', 'join "\\n", sort keys %{$transient{active_hooks}};');
+meta::function('hostname', <<'__');
+strip(join '', qx|hostname|);
+
+__
 meta::function('identity', 'retrieve(\'data::permanent-identity\') || associate(\'data::permanent-identity\', fast_hash(rand() . name() . serialize()));');
 meta::function('import', <<'__');
 my $name = pop @_;
@@ -1768,7 +1785,31 @@ meta::retriever('sdocp', <<'__');
 my $attribute = attribute($_[0]);
 exists $data{"sdoc::$attribute"} ? sdocp("sdoc::$attribute") : undef;
 __
-meta::task('root-mirror', <<'__');
+meta::task('run-deferred', <<'__');
+terminal::info("running $_"),
+&$_(@_) for grep s/^deferred:://, sort keys %data;
+
+__
+meta::task('sync-arch-packages', <<'__');
+my ($host)          = @_;
+my @local_packages  = pacman_package_set();
+my @remote_packages = split /\n/, join '', qx|ssh $host './minion pacman-package-set'|;
+
+my %needed;
+++$needed{$_}      for @local_packages;
+delete $needed{$_} for @remote_packages;
+my @needed = sort keys %needed;
+
+terminal::info("$host needs the following: @needed");
+
+my $hostname = hostname();
+
+create_deferred($host, 'yaourt-update-local', "sh('yaourt -Sy @needed')");
+create_deferred($host, 'download-packages',
+                "sh('sudo rsync $hostname:/var/cache/pacman/pkg/ /var/cache/pacman/pkg')");
+
+__
+meta::task('transfer-root-fileslice-archive', <<'__');
 my ($options, @hosts) = separate_options(@_);
 die 'must specify at least one host' unless @hosts;
 
@@ -1787,22 +1828,7 @@ sudo tar -xjf \$file && rm \$file && rm \$HOME/bin/minion.unpack.root
 eof
 
 __
-meta::task('sync-arch-packages', <<'__');
-my ($host)          = @_;
-my @local_packages  = pacman_package_set();
-my @remote_packages = split /\n/, join '', qx|ssh $host './minion pacman-package-set'|;
-
-my %needed;
-++$needed{$_}      for @local_packages;
-delete $needed{$_} for @remote_packages;
-my @needed = sort keys %needed;
-
-terminal::info("$host needs the following: @needed");
-
-file::write("| ssh $host './minion import task::yaourt-update-local'", "sh('yaourt -Sy @needed')");
-
-__
-meta::task('user-backup', <<'__');
+meta::task('transfer-user-fileslice', <<'__');
 my ($options, @hosts) = separate_options(@_);
 die 'must specify at least one host' unless @hosts;
 
@@ -1812,7 +1838,7 @@ transfer_fileslice('pp::fileslice::user', "--to=$_") for @hosts;
 __
 meta::task('yaourt-update', <<'__');
 my ($host) = @_;
-sh("ssh $host 'yaourt -Syu'");
+create_deferred($host, 'yaourt-system-update', "sh('yaourt -Syu')");
 
 __
 meta::template('comment', '\'\';     # A mechanism for line or block comments.');
