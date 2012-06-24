@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # 99aeabc9ec7fe80b1b39f5e53dc7e49e      <- self-modifying Perl magic
-# state:  b686d124d1a11beb867e36727d35a356
-# istate: b50c0e8cb7cdf63886f21ed5dd58b6c4
+# state:  c7a9eea199d45b73da9d1854eb44b4dd
+# istate: 23c0953f2862dbd6437654bccb3ef83a
 # id:     eabc6fd5b2359a34f31e9362a372f1bf
 
 # This is a self-modifying Perl file. I'm sorry you're viewing the source (it's
@@ -1891,8 +1891,13 @@ meta::task('transfer-user-fileslice', <<'__');
 my ($options, @hosts) = separate_options(@_);
 die 'must specify at least one host' unless @hosts;
 
+# It's likely that this object is included in the fileslice, so send an enabled
+# version rather than the current one (which is likely to be disabled).
+save();
+enable();
 terminal::info("transferring user files to $_"),
 transfer_fileslice('pp::fileslice::user', "--to=$_") for @hosts;
+disable();
 
 __
 meta::task('yaourt-sync', <<'__');
