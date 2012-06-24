@@ -1316,38 +1316,6 @@ return process->new($child_pid) if my $child_pid = fork;
 exit &$f(@args);
 
 __
-meta::internal_function('with_remote', <<'__');
-# Opens an SSH connection to the remote host and sets up an RPC to the remote
-# minion object. The remote minion instance is deleted at the end of the
-# session. Your callback is given a thunk that can be used to execute commands
-# remotely:
-#
-# sub {
-#   my ($run) = @_;
-#   my $remote_name = &$run('perl name()');     # stdout returned into $remote_name
-#   &$run("perl file::write('foo','bar')");     # no stdin/stdout redirection
-#   &$run("create data::bif", 'baz');           # string provided as stdin
-# }
-#
-# The remote instance is initialized as a clone of the current one.
-
-my ($host, $f) = @_;
-
-
-__
-meta::internal_function('with_sshfs_mount', <<'__');
-my ($host, $f) = @_;
-my $mount_point = temporary_name();
-mkdir $mount_point or die "failed to create SSHFS mountpoint $mount_point";
-
-sh("sshfs '$host:/' '$mount_point'") and die 'nonzero exit code from SSHFS';
-my @result = dangerous('', sub {&$f($mount_point)});
-sh("fusermount -u '$mount_point'") and die "failed to unmount SSHFS from $mount_point";
-rmdir $mount_point or die "failed to clean up SSHFS mountpoint $mount_point";
-
-wantarray ? @result : $result[0];
-
-__
 meta::library('process', <<'__');
 package process;
 
@@ -1750,33 +1718,10 @@ meta::retriever('sdocp', <<'__');
 my $attribute = attribute($_[0]);
 exists $data{"sdoc::$attribute"} ? sdocp("sdoc::$attribute") : undef;
 __
-meta::task('clone-to', <<'__');
-my ($target) = @_;
-my $copy = hypothetically(sub {
-  create('minion-data::non-authoritative', '1');
-  create('minion-data::parent-hostname',   join '', qx|hostname|);
-  serialize()});
-
-file::write("| ssh $target 'mkdir -p ~/bin && cat > ~/bin/minion && chmod 0700 ~/bin/minion'", $copy);
-
-__
 meta::task('pacman-package-set', <<'__');
 my @lines = split /\n/, join '', qx|pacman -Qet|;
 s/\s.*// for @lines;
 @lines;
-
-__
-meta::task('using', <<'__');
-# Usage: using [username@]host [command...]
-# Mounts a remote host's filesystem locally, then runs a command on the local
-# machine.
-my ($host, @command) = @_;
-@command = $ENV{SHELL} unless @command;
-
-my $cwd = cwd();
-with_sshfs_mount($host, sub {
-  my ($mount_point) = @_;
-  with_cwd("$mount_point/$cwd", sub {sh(@command)})});
 
 __
 meta::template('comment', '\'\';     # A mechanism for line or block comments.');
