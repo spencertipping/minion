@@ -117,6 +117,10 @@ meta::configure 'cache', inherit => 0;
 meta::define_form 'cache', \&meta::bootstrap::implementation;
 __
 meta::meta('type::data', 'meta::functor::editable \'data\', extension => \'\', inherit => 0, default => \'cat\';');
+meta::meta('type::fileslice', <<'__');
+meta::functor::editable 'fileslice', extension => '.sdoc', inherit => 1, default => 'edit';
+
+__
 meta::meta('type::function', <<'__');
 meta::configure 'function', extension => '.pl', inherit => 1;
 meta::define_form 'function', sub {
@@ -467,6 +471,11 @@ my $name = pop @_;
 file::write($name, join "\n", retrieve(@_));
 __
 meta::function('extern', '&{$_[0]}(retrieve(@_[1 .. $#_]));');
+meta::function('files-in-fileslice', <<'__');
+map "'$_'", grep s/'/\\'/g || 1, parse_fileslice($_[0]);
+
+
+__
 meta::function('grep', <<'__');
 # Looks through attributes for a pattern. Usage is grep pattern [options], where
 # [options] is the format as provided to select_keys.
@@ -574,6 +583,10 @@ $name =~ s/^.*\///;
 $name;
 __
 meta::function('parents', 'join "\\n", grep s/^parent:://o, sort keys %data;');
+meta::function('parse-fileslice', <<'__');
+grep length, grep s/\s*#.*$// || 1, split /\n\s*/, retrieve($_[0]);
+
+__
 meta::function('perl', <<'__');
 my @result = eval(join ' ', @_);
 $@ ? terminal::error($@) : wantarray ? @result : $result[0];
@@ -892,7 +905,24 @@ $hash = fast_hash("$data{$_}|$hash") for @keys;
 fast_hash("$global_data|$hash");
 
 __
+meta::function('tar-fileslice', <<'__');
+my ($options, @slices) = separate_options(@_);
+my @slice = map files_in_fileslice($_), @slices;
+
+my $archived = join '', qx|tar -c @slice|;
+return file::write($$options{'--into'}, $archived) if $$options{'--into'};
+return $archived;
+
+__
 meta::function('touch', 'associate($_, \'\') for @_;');
+meta::function('transfer-fileslice', <<'__');
+my ($options, @slices) = separate_options(@_);
+my @slice = map files_in_fileslice($_), @slices;
+
+die 'must specify a destination hostname using --to' unless $$options{'--to'};
+sh("tar -cj @slice | ssh $$options{'--to'} 'tar -xj'");
+
+__
 meta::function('unlock', 'hook(\'unlock\', chmod_self(sub {$_[0] | 0200}));');
 meta::function('update', <<'__');
 update_from(@_, grep s/^parent:://o, sort keys %data);
@@ -977,7 +1007,7 @@ hook('after-verify', $result, observed => $observed, expected => $state);
 $result;
 __
 meta::hook('before-shell::ad', <<'__');
-ad('task::');
+ad('task::|fileslice::');
 
 __
 meta::indicator('cc', 'length ::retrieve(\'data::current-continuation\') ? "\\033[1;36mcc\\033[0;0m" : \'\';');
@@ -1722,6 +1752,14 @@ meta::task('pacman-package-set', <<'__');
 my @lines = split /\n/, join '', qx|pacman -Qet|;
 s/\s.*// for @lines;
 @lines;
+
+__
+meta::task('user-backup', <<'__');
+my ($options, @hosts) = separate_options(@_);
+die 'must specify at least one host' unless @hosts;
+
+terminal::info("transferring user files to $_"),
+transfer_fileslice('pp::fileslice::user', "--to=$_") for @hosts;
 
 __
 meta::template('comment', '\'\';     # A mechanism for line or block comments.');
