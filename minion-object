@@ -935,11 +935,10 @@ meta::function('touch', 'associate($_, \'\') for @_;');
 meta::function('transfer-fileslice', <<'__');
 my ($options, @slices) = separate_options(@_);
 my @slice = map files_in_fileslice($_), @slices;
-my $name  = join '.', @slices;
 
 die 'must specify a destination hostname using --to' unless $$options{'--to'};
-my $unpack_command = $$options{'--no-unpack'} ? "cat > minion-$name.tar.bz2"
-                                              : "tar -xj";
+my $unpack_command = $$options{'--archive'} ? "cat > $$options{'--archive'}"
+                                            : "tar -xj";
 sh("tar -cj @slice | ssh $$options{'--to'} '$unpack_command'");
 
 __
@@ -1773,14 +1772,18 @@ meta::task('root-mirror', <<'__');
 my ($options, @hosts) = separate_options(@_);
 die 'must specify at least one host' unless @hosts;
 
-terminal::info("transferring root files to $_"),
-transfer_fileslice('pp::fileslice::root', '--no-unpack', "--to=$_") for @hosts;
+my $archive_name = 'minion.' . state() . '.tar.bz2';
 
-file::write(<<eof, "| ssh $_ 'cat > bin/minion.unpack.root; chmod u+x bin/minion.unpack.root'");
+terminal::info("using $archive_name as the temporary file");
+
+terminal::info("transferring root files to $_"),
+transfer_fileslice('pp::fileslice::root', "--archive=$archive_name", "--to=$_") for @hosts;
+
+file::write("| ssh $_ 'cat > bin/minion.unpack.root; chmod u+x bin/minion.unpack.root'", <<eof) for @hosts;
 #!/bin/bash
-file=\$HOME/minion-pp::fileslice::root.tar.bz2
+file=\$HOME/$archive_name
 cd /
-sudo tar -xj \$file && rm \$file && rm \$HOME/bin/minion.unpack.root
+sudo tar -xjf \$file && rm \$file && rm \$HOME/bin/minion.unpack.root
 eof
 
 __
