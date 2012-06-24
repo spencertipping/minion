@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # 99aeabc9ec7fe80b1b39f5e53dc7e49e      <- self-modifying Perl magic
-# state:  c7a9eea199d45b73da9d1854eb44b4dd
-# istate: 23c0953f2862dbd6437654bccb3ef83a
+# state:  a0adfdbf5961563e6ac82e2e4d4e25bb
+# istate: 0649694e7f21943c3655a6395e8f10b6
 # id:     eabc6fd5b2359a34f31e9362a372f1bf
 
 # This is a self-modifying Perl file. I'm sorry you're viewing the source (it's
@@ -370,10 +370,10 @@ object 99aeabc9ec7fe80b1b39f5e53dc7e49e
 preprocessor 70dae4b46eb4e06798ec6f38d17d4c7b
 __
 meta::cache('parent-state', <<'__');
-6d91ceddac6a7eac8daeac1153e3cd59 cec8efb7a5028a87846c1eb961882e25
-70dae4b46eb4e06798ec6f38d17d4c7b d435ab4c1aced9b455a369146d9e8a8e
-99aeabc9ec7fe80b1b39f5e53dc7e49e e5ac795267a874f03f04a496d7936d15
-a1e8480e579614c01dabeecf0f963bcc 37e29f896ee4b82417166cdb5b876b38
+6d91ceddac6a7eac8daeac1153e3cd59 39dc8a8464e828897474f99fe030a21b
+70dae4b46eb4e06798ec6f38d17d4c7b afce1a0fe6be2323931aa9029d0b640b
+99aeabc9ec7fe80b1b39f5e53dc7e49e cf7aa26661d190c3047ad4fd2bea91b0
+a1e8480e579614c01dabeecf0f963bcc d17762b11e9af22e437ec80c0b9169ad
 __
 meta::data('author', <<'__');
 Spencer Tipping <spencer@spencertipping.com>
@@ -1034,11 +1034,13 @@ around_hook('update-from-invocation', separate_options(@_), sub {
   @targets = (@known_targets, @unknown_targets);
 
   my $save_state        = $$options{'-s'} || $$options{'--save'};
+  my $no_state          = $$options{'-S'} || $$options{'--no-state'};
+  my $no_verify         = $$options{'-V'} || $$options{'--no-verify'};
   my $no_parents        = $$options{'-P'} || $$options{'--no-parent'} || $$options{'--no-parents'};
   my $force             = $$options{'-f'} || $$options{'--force'};
   my $clobber_divergent = $$options{'-D'} || $$options{'--clobber-divergent'};
 
-  save_state('before-update');
+  save_state('before-update') unless $no_state;
 
   for my $target (@targets) {
     dangerous("updating from $target", sub {
@@ -1078,12 +1080,15 @@ around_hook('update-from-invocation', separate_options(@_), sub {
   cache('parent-identification', %parent_id_cache);
   cache('parent-state',          %parent_state_cache);
 
-  if (verify()) {hook('update-from-succeeded', $options, @targets);
-                 terminal::info("Successfully updated. Run 'load-state before-update' to undo this change.") if $save_state;
-                 rm('state::before-update') unless $save_state}
-  elsif ($force) {hook('update-from-failed', $options, @targets);
-                  terminal::warning('Failed to verify: at this point your object will not save properly, though backup copies will be created.',
-                                    'Run "load-state before-update" to undo the update and return to a working state.')}
+  if ($no_verify) {hook('update-from-presumably-succeeded', $options, @targets);
+                   rm('state::before-update') unless $no_state || $save_state}
+  elsif (verify()) {hook('update-from-succeeded', $options, @targets);
+                    terminal::info("Successfully updated. Run 'load-state before-update' to undo this change.") if $save_state;
+                    rm('state::before-update') unless $no_state || $save_state}
+  elsif ($force || $no_state) {hook('update-from-failed', $options, @targets);
+                               terminal::warning('Failed to verify: at this point your object will not save properly, though backup copies will be created.',
+                                                 $no_state ? 'You should attempt to repair this object since no prior state was saved.'
+                                                           : 'Run "load-state before-update" to undo the update and return to a working state.')}
   else {hook('update-from-failed', $options, @targets);
         terminal::error('Verification failed after the upgrade was complete.');
         terminal::info("$0 has been reverted to its pre-upgrade state.", "If you want to upgrade and keep the failure state, then run 'update-from $target --force'.");
@@ -1576,7 +1581,7 @@ function::state                         ef2051d9fe0684044d0f3df752e0c949
 function::touch                         3991b1b7c7187566f50e5e58ce01fa06
 function::unlock                        b4aac02f7f3fb700acf4acfd9b180ceb
 function::update                        ac391dc90e507e7586c81850e7c2ecdd
-function::update-from                   062be1e05bb28bc705cd9c5ec864886b
+function::update-from                   fb2e2a5050f092b0240e2badb78519f7
 function::usage                         5bdd370f5a56cfbf199e08d398091444
 function::verify                        0c0cc1dfeab7d705919df122f7850a4f
 indicator::cc                           3db7509c521ee6abfedd33d5f0148ed3
@@ -1654,7 +1659,7 @@ function::sdoc-packed                    8ec4975fca7228708baae6ccd241bdbf
 function::sdocp                          c3d738d982ba87418a298ff58478a85b
 meta::type::sdoc                         22cd7315641d38c9d536344e83c36bed
 meta::type::slibrary                     95474943c4a5f8ff17d3cf66ddb7c386
-parent::/home/spencertipping/bin/object  2b5682ecb895b257b18100417d4f38e0
+parent::/home/spencertipping/bin/object  579ee8f6e2d7aacc2db92517bf6733ba
 retriever::code-sdoc                     03b87ff8d1ecf7594db9ca0669fc69a1
 retriever::html-sdoc                     8ab7705d03276945b23a71677153233c
 retriever::markdown-sdoc                 67c34ba8223ec36a3ae018e411354db2
@@ -1665,7 +1670,7 @@ retriever::sdocp                         fcfcf3a7de79d7d863402b9ccfcac3c4
 __
 meta::parent('log', <<'__');
 meta::type::log                          c11b43065a2c79d9473d0fa89a53d616
-parent::/home/spencertipping/bin/object  2b5682ecb895b257b18100417d4f38e0
+parent::/home/spencertipping/bin/object  579ee8f6e2d7aacc2db92517bf6733ba
 
 __
 meta::parent('object', <<'__');
@@ -1796,7 +1801,7 @@ __
 meta::parent('preprocessor', <<'__');
 function::preprocess           ab5526a02ff417d4c162357dc327e7c4
 meta::type::template           bc4b0c80b5efc716b19e99b832c22bf3
-parent::object                 2b5682ecb895b257b18100417d4f38e0
+parent::object                 579ee8f6e2d7aacc2db92517bf6733ba
 retriever::pp                  3b5f5c5d30c5a04f72056dedaacfe7b7
 template::comment              dfe273d2dad3d8159b847545e4e5c309
 template::eval                 1a0e2124a05056be4abc11803883c294
