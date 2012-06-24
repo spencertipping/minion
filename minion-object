@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # 99aeabc9ec7fe80b1b39f5e53dc7e49e      <- self-modifying Perl magic
-# state:  5405fe6914f422e7cc4cd295e1e773b9
-# istate: 98a26fa2441552efe36552caeb8787e2
+# state:  0ddb4dbcad1749f515bd0449c5a62669
+# istate: 087cfd367a358e237e07aef337dec98a
 # id:     eabc6fd5b2359a34f31e9362a372f1bf
 
 # This is a self-modifying Perl file. I'm sorry you're viewing the source (it's
@@ -540,6 +540,29 @@ return strip(file::read($resolved_symref)) if -f $resolved_symref;
 die "$repository_directory: no symref $symref or .git/info/refs" unless -f "$repository_directory/.git/info/refs";
 my @lines = grep s/^(\S+)\s+(\S+)$/\1/ && $2 eq $symref, split /\n\s*/, file::read("$repository_directory/.git/info/refs");
 $lines[0];
+
+__
+meta::function('git-ensure-remote', <<'__');
+my ($repo, $hostname) = @_;
+die 'must specify a hostname'     unless $hostname;
+die "$repo has no .git directory" unless -d "$repo/.git";
+
+my $contains_hostname = grep s/^\[remote "([^"]+)"\]/\1/ && $1 eq $hostname,
+                        split /\n/, file::read("$repo/.git/config");
+
+return if $contains_hostname;
+
+terminal::info("adding remote $hostname to $repo");
+my $config     = file::read("$repo/.git/config");
+my $username   = username();
+my $new_config = "$config\n" . <<eof;
+[remote "$hostname"]
+        url = $username\@$hostname:$repo
+        fetch = +refs/heads/*:refs/remotes/$hostname/*
+eof
+
+file::write("$repo/.git/config.original", $config);
+file::write("$repo/.git/config", $new_config);
 
 __
 meta::function('grep', <<'__');
