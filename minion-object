@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # 99aeabc9ec7fe80b1b39f5e53dc7e49e      <- self-modifying Perl magic
-# state:  7d678cb577d592193440514e1db49032
-# istate: 2f89264403f5a33365414783286ec588
+# state:  d839c6c811340761481f8367d222f68d
+# istate: 6722bde094f65af8bf2f9693133c4d9e
 # id:     eabc6fd5b2359a34f31e9362a372f1bf
 
 # This is a self-modifying Perl file. I'm sorry you're viewing the source (it's
@@ -1971,7 +1971,7 @@ my $username = username();
 create_deferred($host, 'yaourt-update-local', "sh('yaourt -Sy @needed')");
 create_deferred($host, 'download-packages',
                 # Explicit uesrname required because rsync runs as root
-                "sh('sudo rsync -aux $username\@$hostname:/var/cache/pacman/pkg/ /var/cache/pacman/pkg')");
+                "sh('sudo rsync -auvx $username\@$hostname:/var/cache/pacman/pkg/ /var/cache/pacman/pkg')");
 
 __
 meta::task('yaourt-update', <<'__');
