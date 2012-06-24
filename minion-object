@@ -251,7 +251,8 @@ meta::meta('type::task', <<'__');
 meta::configure 'task', extension => '.pl', inherit => 1;
 meta::define_form 'task', sub {
   my ($name, $value) = @_;
-  meta::externalize $name, "task::$name", meta::eval_in("sub {\n$value\n}", "task::$name");
+  meta::externalize $name, "task::$name",
+    meta::eval_in("sub {hook('task/before-$name');$value;\nhook('task/after-$name')}", "task::$name");
 };
 
 __
@@ -1763,6 +1764,13 @@ die 'must specify at least one host' unless @hosts;
 
 terminal::info("transferring root files to $_"),
 transfer_fileslice('pp::fileslice::root', '--no-unpack', "--to=$_") for @hosts;
+
+file::write(<<eof, "| ssh $_ 'cat > bin/minion.unpack.root; chmod u+x bin/minion.unpack.root'");
+#!/bin/bash
+file=\$HOME/minion-pp::fileslice::root.tar.bz2
+cd /
+sudo tar -xj \$file && rm \$file && rm \$HOME/bin/minion.unpack.root
+eof
 
 __
 meta::task('user-backup', <<'__');
