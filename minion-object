@@ -252,7 +252,7 @@ meta::configure 'task', extension => '.pl', inherit => 1;
 meta::define_form 'task', sub {
   my ($name, $value) = @_;
   meta::externalize $name, "task::$name",
-    meta::eval_in("sub {\naround_hook('task/$name', sub {$value})\n}", "task::$name");
+    meta::eval_in("sub {\naround_hook('task/$name', \@_, sub {$value})\n}", "task::$name");
 };
 
 __
