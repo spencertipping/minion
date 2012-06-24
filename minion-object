@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # 99aeabc9ec7fe80b1b39f5e53dc7e49e      <- self-modifying Perl magic
-# state:  d83095003e8f851bc899c11caa431a48
-# istate: 5e3744d51564c0752fbb586e2590a7ba
+# state:  5849608afe02c14c03d61ccb0a563d31
+# istate: 341e89985e441507f19887103f32dad9
 # id:     eabc6fd5b2359a34f31e9362a372f1bf
 
 # This is a self-modifying Perl file. I'm sorry you're viewing the source (it's
@@ -784,8 +784,9 @@ die 'must specify a destination host using --to' unless $$options{'--to'};
 my @quoted = map "'$_'", grep s/'/\\'/g || 1, @directories;
 my $compressed = $$options{'--no-zip'} ? '' : '-z';
 my $delete     = $$options{'--delete'} ? '--delete' : '';
+my $verbose    = $$options{'--verbose'} || $$options{'-v'} ? '-v' : '';
 my $dry_run    = $$options{'--dry-run'} || $$options{'-n'} ? '-nv' : '';
-sh("rsync -aux $dry_run $delete $compressed $_/ $$options{'--to'}:$_") for @quoted;
+sh("rsync -aux $verbose $dry_run $delete $compressed $_/ $$options{'--to'}:$_") for @quoted;
 
 __
 meta::function('save', <<'__');
