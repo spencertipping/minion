@@ -918,9 +918,12 @@ meta::function('touch', 'associate($_, \'\') for @_;');
 meta::function('transfer-fileslice', <<'__');
 my ($options, @slices) = separate_options(@_);
 my @slice = map files_in_fileslice($_), @slices;
+my $name  = join '.', @slices;
 
 die 'must specify a destination hostname using --to' unless $$options{'--to'};
-sh("tar -cj @slice | ssh $$options{'--to'} 'tar -xj'");
+my $unpack_command = $$options{'--no-unpack'} ? "cat > minion-$name.tar.bz2"
+                                              : "tar -xj";
+sh("tar -cj @slice | ssh $$options{'--to'} '$unpack_command'");
 
 __
 meta::function('unlock', 'hook(\'unlock\', chmod_self(sub {$_[0] | 0200}));');
@@ -1752,6 +1755,14 @@ meta::task('pacman-package-set', <<'__');
 my @lines = split /\n/, join '', qx|pacman -Qet|;
 s/\s.*// for @lines;
 @lines;
+
+__
+meta::task('root-mirror', <<'__');
+my ($options, @hosts) = separate_options(@_);
+die 'must specify at least one host' unless @hosts;
+
+terminal::info("transferring root files to $_"),
+transfer_fileslice('pp::fileslice::root', '--no-unpack', "--to=$_") for @hosts;
 
 __
 meta::task('user-backup', <<'__');
