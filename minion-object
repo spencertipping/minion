@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # 99aeabc9ec7fe80b1b39f5e53dc7e49e      <- self-modifying Perl magic
-# state:  109dfbf5bd1e96e494031111a16413eb
-# istate: d0b40a98e60a1c601a1265012e2e2a60
+# state:  486fb1bc3ed23ba064f155ac9129eefb
+# istate: f5f94dfaac6faaeb75b5456b943dcde0
 # id:     eabc6fd5b2359a34f31e9362a372f1bf
 
 # This is a self-modifying Perl file. I'm sorry you're viewing the source (it's
@@ -540,6 +540,13 @@ return strip(file::read($resolved_symref)) if -f $resolved_symref;
 die "$repository_directory: no symref $symref or .git/info/refs" unless -f "$repository_directory/.git/info/refs";
 my @lines = grep s/^(\S+)\s+(\S+)$/\1/ && $2 eq $symref, split /\n\s*/, file::read("$repository_directory/.git/info/refs");
 $lines[0];
+
+__
+meta::function('git-ensure-bundle-remotes', <<'__');
+my ($bundle_directory, $hostname) = @_;
+my @repositories = grep -d "$_/.git", <$bundle_directory/*>;
+
+git_ensure_remote($_, $hostname) for @repositories;
 
 __
 meta::function('git-ensure-remote', <<'__');
