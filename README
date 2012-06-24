@@ -1,0 +1,3 @@
+Minion: a fairly complex way to mirror your home directory and system configs
+to different systems. It's written in self-modifying Perl, so you probably
+shouldn't use it.
