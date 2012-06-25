@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # 99aeabc9ec7fe80b1b39f5e53dc7e49e      <- self-modifying Perl magic
-# state:  9fa24b8760972f3983244c1568ef5307
-# istate: cb575c3f6f379e41583434cfd3cf8684
+# state:  c7154d4988895eb390cb7e4d5586b801
+# istate: 8ae24f679edb56b991bf109839e611c5
 # id:     eabc6fd5b2359a34f31e9362a372f1bf
 
 # This is a self-modifying Perl file. I'm sorry you're viewing the source (it's
@@ -216,8 +216,8 @@ meta::meta('type::meta', <<'__');
 
 meta::configure 'meta', extension => '.pl', inherit => 1;
 __
-meta::meta('type::minion-data', <<'__');
-meta::functor::editable 'minion-data', extension => '.sdoc', inherit => 1, default => 'edit';
+meta::meta('type::minion_data', <<'__');
+meta::functor::editable 'minion_data', inherit => 1, default => 'edit';
 
 __
 meta::meta('type::parent', <<'__');
@@ -1821,6 +1821,10 @@ __
 meta::retriever('sdocp', <<'__');
 return undef unless $_[0] =~ /^sdocp::(.*)$/;
 exists $data{"sdoc::$1"} ? sdocp("sdoc::$1") : undef;
+
+__
+meta::task('intern-crontab', <<'__');
+associate('minion_data::crontab', join '', qx(crontab -l));
 
 __
 meta::task('run-deferred', <<'__');
