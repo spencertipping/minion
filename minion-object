@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # 99aeabc9ec7fe80b1b39f5e53dc7e49e      <- self-modifying Perl magic
-# state:  87a284ef490340b3372df033203d186c
-# istate: 910293b0b09e6a80fbd1dbc17d2db2c0
+# state:  9fa24b8760972f3983244c1568ef5307
+# istate: cb575c3f6f379e41583434cfd3cf8684
 # id:     eabc6fd5b2359a34f31e9362a372f1bf
 
 # This is a self-modifying Perl file. I'm sorry you're viewing the source (it's
@@ -1872,6 +1872,7 @@ my @needed = grep $needed{$_} > 0, sort @local_packages;
 my @extra  = grep $extra{$_}  > 0, sort @remote_packages;
 
 terminal::info("$host needs the following: @needed");
+terminal::info("$host has the following extra packages: @extra");
 
 my $hostname = hostname();
 my $username = username();
