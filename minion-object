@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # 99aeabc9ec7fe80b1b39f5e53dc7e49e      <- self-modifying Perl magic
-# state:  adfddf9eced286b2f59b2a4df8a7264d
-# istate: 0bc1c352ebb748a7d027104f57b1bf4f
+# state:  87a284ef490340b3372df033203d186c
+# istate: 910293b0b09e6a80fbd1dbc17d2db2c0
 # id:     eabc6fd5b2359a34f31e9362a372f1bf
 
 # This is a self-modifying Perl file. I'm sorry you're viewing the source (it's
@@ -1865,10 +1865,11 @@ my ($host)          = @_;
 my @local_packages  = pacman_package_set();
 my @remote_packages = grep length, split /\n/, join '', qx|ssh $host './minion pacman-package-set'|;
 
-my %needed;
-++$needed{$_}      for @local_packages;
-delete $needed{$_} for @remote_packages;
-my @needed = sort keys %needed;
+my %needed, %extra;
+++$needed{$_}, --$extra{$_} for @local_packages;
+--$needed{$_}, ++$extra{$_} for @remote_packages;
+my @needed = grep $needed{$_} > 0, sort @local_packages;
+my @extra  = grep $extra{$_}  > 0, sort @remote_packages;
 
 terminal::info("$host needs the following: @needed");
 
@@ -1880,7 +1881,8 @@ create_deferred($host, 'download-packages',
                 # Explicit uesrname required because rsync runs as root
                 "sh('sudo rsync -auvx $username\@$hostname:/var/cache/pacman/pkg/ /var/cache/pacman/pkg')");
 
-create_deferred($host, 'yaourt-update-remote', "sh('yaourt -Sy --needed @needed')");
+create_deferred($host, 'yaourt-remove-remote', "sh('yaourt -Rs @extra')") if @extra;
+create_deferred($host, 'yaourt-update-remote', "sh('yaourt -Sy --needed @needed')") if @needed;
 
 __
 meta::task('yaourt-update', <<'__');
