@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # 99aeabc9ec7fe80b1b39f5e53dc7e49e      <- self-modifying Perl magic
-# state:  c7154d4988895eb390cb7e4d5586b801
-# istate: 8ae24f679edb56b991bf109839e611c5
+# state:  501a8e9b007eba32747d834487181dfb
+# istate: 3dbd82e84ec48d261c92c9c9dc6520e0
 # id:     eabc6fd5b2359a34f31e9362a372f1bf
 
 # This is a self-modifying Perl file. I'm sorry you're viewing the source (it's
@@ -513,6 +513,17 @@ meta::function('extern', '&{$_[0]}(retrieve(@_[1 .. $#_]));');
 meta::function('files-in-fileslice', <<'__');
 map "'$_'", grep s/'/\\'/g || 1, parse_fileslice($_[0]);
 
+
+__
+meta::function('git-bundle-commit-order', <<'__');
+my ($bundle_directory) = @_;
+my @repositories = grep -d "$_/.git", <$bundle_directory/*>;
+
+my %commit_dates;
+$commit_dates{$_} = join '', qx|git --git-dir=$_/.git log --pretty=format:%at|
+for @repositories;
+
+sort {$commit_dates{$b} - $commit_dates{$a}} @repositories;
 
 __
 meta::function('git-bundle-ensure-remotes', <<'__');
