@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # 99aeabc9ec7fe80b1b39f5e53dc7e49e      <- self-modifying Perl magic
-# state:  9eaf6caf7979db433fbbd226445b3152
-# istate: c3eee3b06c49abbca0b42c020cfc34f2
+# state:  655bba9c0039ad90e6be543959b047d5
+# istate: e521e3229ec0c3289c68a64624a2109d
 # id:     eabc6fd5b2359a34f31e9362a372f1bf
 
 # This is a self-modifying Perl file. I'm sorry you're viewing the source (it's
@@ -1848,17 +1848,27 @@ my ($options, @hosts) = separate_options(@_);
 die 'must specify at least one host' unless @hosts;
 
 my $archive_name = 'minion.' . state() . '.tar.bz2';
+my $hostname     = hostname();
 
 terminal::info("using $archive_name as the temporary file");
 
 terminal::info("transferring root files to $_"),
-transfer_fileslice('pp::fileslice::root', "--archive=$archive_name", "--to=$_") for @hosts;
+transfer_fileslice('pp::fileslice::root',
+                   "--archive=$archive_name",
+                   "--to=$_") for @hosts;
 
-file::write("| ssh $_ 'cat > bin/minion.unpack.root; chmod u+x bin/minion.unpack.root'", <<eof) for @hosts;
+file::write("| ssh $_ 'cat > bin/minion.unpack.root; chmod u+x bin/minion.unpack.root'",
+            <<eof) for @hosts;
 #!/bin/bash
 file=\$HOME/$archive_name
 cd /
+files=\$(tar -tvf \$file)
 sudo tar -xjf \$file && rm \$file && rm \$HOME/bin/minion.unpack.root
+
+# Rewrite hostname occurrences within system files
+for f in \$files; do
+  sudo sed -ri 's/$hostname/$_/g' \$f
+done
 eof
 
 __
