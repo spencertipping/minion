@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # 99aeabc9ec7fe80b1b39f5e53dc7e49e      <- self-modifying Perl magic
-# state:  655bba9c0039ad90e6be543959b047d5
-# istate: e521e3229ec0c3289c68a64624a2109d
+# state:  2430852d093bdbd20ec8e20513b977df
+# istate: a35670d39eee7206483e20c9dbe6286a
 # id:     eabc6fd5b2359a34f31e9362a372f1bf
 
 # This is a self-modifying Perl file. I'm sorry you're viewing the source (it's
@@ -1862,13 +1862,15 @@ file::write("| ssh $_ 'cat > bin/minion.unpack.root; chmod u+x bin/minion.unpack
 #!/bin/bash
 file=\$HOME/$archive_name
 cd /
-files=\$(tar -tvf \$file)
-sudo tar -xjf \$file && rm \$file && rm \$HOME/bin/minion.unpack.root
+files=\$(tar -tf \$file)
+sudo tar -xjf \$file && rm \$file
 
 # Rewrite hostname occurrences within system files
 for f in \$files; do
   sudo sed -ri 's/$hostname/$_/g' \$f
 done
+
+echo if that worked, you can now run rm \$HOME/bin/minion.unpack.root
 eof
 
 __
