@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # 99aeabc9ec7fe80b1b39f5e53dc7e49e      <- self-modifying Perl magic
-# state:  2430852d093bdbd20ec8e20513b977df
-# istate: a35670d39eee7206483e20c9dbe6286a
+# state:  bf19c46b388437239e1148319a3a3ef0
+# istate: f46c56709eee7206483e20c9f7c2e092
 # id:     eabc6fd5b2359a34f31e9362a372f1bf
 
 # This is a self-modifying Perl file. I'm sorry you're viewing the source (it's
@@ -623,6 +623,26 @@ __
 meta::function('hooks', 'join "\\n", sort keys %{$transient{active_hooks}};');
 meta::function('hostname', <<'__');
 strip(join '', qx|hostname|);
+
+__
+meta::function('hosts', <<'__');
+my @required = @_;
+
+create('minion_data::host-list') unless exists $data{'minion_data::host-list'};
+my @lines = grep length, grep s/#.*$// || 1, split /\n/,
+            retrieve('minion_data::host-list');
+my %result;
+$result{shift @$_} = {map {$_ => 1} @$_} for map [split /\s+/], @lines;
+
+# Remove hosts that don't have the correct flags.
+for my $flag (@required) {
+  my $should_have_flag = $flag !~ s/^!//;
+
+  $result{$_}{$flag} == $should_have_flag or delete $result{$_}
+  for keys %result}
+
+@required ? sort keys %result           # List of matching hosts
+          : %result;                    # All hosts with attributes
 
 __
 meta::function('identity', 'retrieve(\'data::permanent-identity\') || associate(\'data::permanent-identity\', fast_hash(rand() . name() . serialize()));');
@@ -1834,8 +1854,52 @@ return undef unless $_[0] =~ /^sdocp::(.*)$/;
 exists $data{"sdoc::$1"} ? sdocp("sdoc::$1") : undef;
 
 __
+meta::task('each-machine', <<'__');
+# Usage: each-machine 'command'
+# Prefixes the output with the machine name in blue.
+
+sh("ssh $_ /bin/true >& /dev/null &&
+    echo -n '\033[1;34m$_\033[0;0m\033[20G' && ssh $_ '@_'")
+for hosts('!no-ssh');
+
+__
+meta::task('host-disk', <<'__');
+each_machine('df -h | grep /$ | head -n1');
+
+__
+meta::task('host-status', <<'__');
+my %hosts = hosts();
+
+sh("echo -n '\033[1;34m$_\033[0;0m'"),
+sh(qq+host $_ >& /dev/null &&
+      echo -n '\033[20Gdns: \033[1;32m' &&
+        (host $_ | awk '{print \$4}' | tr -d '\\n') &&
+      echo -n '\033[0;0m' ||
+      echo -n '\033[20Gdns: none'+),
+
+$hosts{$_}{'no-ssh'}
+  ? sh("echo '\033[40Gssh: \033[1;33mdisabled\033[0;0m'")
+  : sh(qq+ssh $_ /bin/true >& /dev/null &&
+          echo '\033[40Gssh: \033[1;32mup\033[0;0m' ||
+          echo '\033[40Gssh: down'+)
+
+for sort keys %hosts;
+
+__
+meta::task('host-uname', <<'__');
+each_machine('uname -r');
+
+__
+meta::task('host-uptime', <<'__');
+each_machine('uptime')
+
+__
 meta::task('intern-crontab', <<'__');
 associate('minion_data::crontab', join '', qx(crontab -l));
+
+__
+meta::task('propagate-ssh-id', <<'__');
+sh("ssh-copy-id $_") for hosts('!no-ssh');
 
 __
 meta::task('run-deferred', <<'__');
