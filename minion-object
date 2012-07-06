@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # 99aeabc9ec7fe80b1b39f5e53dc7e49e      <- self-modifying Perl magic
-# state:  bf19c46b388437239e1148319a3a3ef0
-# istate: f46c56709eee7206483e20c9f7c2e092
+# state:  f64090861229a147ca18780b32a656c7
+# istate: 9715962a9eee7206483e20c9ecfd918a
 # id:     eabc6fd5b2359a34f31e9362a372f1bf
 
 # This is a self-modifying Perl file. I'm sorry you're viewing the source (it's
@@ -367,13 +367,12 @@ log 6d91ceddac6a7eac8daeac1153e3cd59
 object 99aeabc9ec7fe80b1b39f5e53dc7e49e
 preprocessor 70dae4b46eb4e06798ec6f38d17d4c7b
 sdoc a1e8480e579614c01dabeecf0f963bcc
-
 __
 meta::cache('parent-state', <<'__');
-6d91ceddac6a7eac8daeac1153e3cd59 70465452eefa21510e81029426895bf7
-70dae4b46eb4e06798ec6f38d17d4c7b 581d5d1dad75f13bebc3e2a9b79c1bcd
-99aeabc9ec7fe80b1b39f5e53dc7e49e ec7516883f304201f36ea640e51d6bec
-a1e8480e579614c01dabeecf0f963bcc 0f60bbddcd3f574cc94738d991b6c2ac
+6d91ceddac6a7eac8daeac1153e3cd59 8b7e633018e7045a640a6bbf44edafa0
+70dae4b46eb4e06798ec6f38d17d4c7b bc41494eba741f1fadea8b6c28cf94b9
+99aeabc9ec7fe80b1b39f5e53dc7e49e 0f8b07ccc9e0900bea16e157613fe7eb
+a1e8480e579614c01dabeecf0f963bcc 7b8062b5573bc69d3f5746fb501412a1
 __
 meta::data('author', <<'__');
 Spencer Tipping <spencer@spencertipping.com>
@@ -479,7 +478,7 @@ my $extension = extension_for($name);
 around_hook('edit', @_, sub {
   associate($name, invoke_editor_on($data{$name} // '', %$options, attribute => $name, extension => $extension), execute => 1)});
 
-save() unless $data{'data::edit::no-save'};
+save() unless $data{'data::edit::no-save'} or state() eq $transient{initial};
 '';
 
 __
@@ -1075,6 +1074,10 @@ file::write(my $finalname = temporary_name($name), serialize(), noclobber => 1);
 chmod 0700, $finalname;
 hook('snapshot', $finalname);
 __
+meta::function('snapshot-if-necessary', <<'__');
+snapshot() if state() ne $transient{initial};
+
+__
 meta::function('state', <<'__');
 my ($options, @attributes) = separate_options(@_);
 @attributes = grep !is($_, '-v'), sort keys %data unless @attributes;
@@ -1389,15 +1392,15 @@ __
 meta::internal_function('internal::main', <<'__');
 disable();
 
-$SIG{'INT'} = sub {snapshot(); exit 1};
-
+$SIG{'INT'}              = sub {snapshot_if_necessary(); exit 1};
 $transient{initial}      = state();
 chomp(my $default_action = retrieve('data::default-action'));
 
 my $function_name = shift(@ARGV) || $default_action;
 my @effective_argv = @ARGV;
 
-unshift @effective_argv, $function_name and $function_name = 'method_missing' unless exists $externalized_functions{$function_name};
+unshift @effective_argv, $function_name and $function_name = 'method_missing'
+unless exists $externalized_functions{$function_name};
 
 around_hook('main-function', $function_name, @effective_argv, sub {
   dangerous('', sub {
@@ -1639,7 +1642,7 @@ meta::message_color('state', 'purple');
 meta::message_color('states', 'yellow');
 meta::parent('log', <<'__');
 meta::type::log  c11b43065a2c79d9473d0fa89a53d616
-parent::object   8f920c8ec38cb39e732cbdcc3abc7f93
+parent::object   0f0ac3b3f23a7d249803137357b0e598
 
 __
 meta::parent('object', <<'__');
@@ -1658,7 +1661,7 @@ function::create                        d65deb895a848b32d3d7ed92e81e8cb0
 function::current-state                 6f03f86f1901e9ef07fdb5d4079a914c
 function::cwd                           fd9b58e76c474a8fe93dc3abdccb8857
 function::disable                       53b449708cc2ffdefa352e53bb7d847d
-function::edit                          735dbdece3998a4478bec3b7bdc04f03
+function::edit                          6e5bd5f35ff9cf66edd2d2d9943a7b4e
 function::edit-self                     71790df00f941ed9b56e17f789b93871
 function::enable                        7de1cedc36841f5de8f9fdfbc3b65097
 function::expanded-bootstrap            7ea5eb3e6a715cddcdfd85ae688286e1
@@ -1693,6 +1696,7 @@ function::shb                           21139548efb79500d9c999dba024ab32
 function::shell                         a87f389b94713e5855e62241d649d01d
 function::size                          69f6ab4a100c6ef05d4d41510004d645
 function::snapshot                      56939a47f2758421669641e15ebd66eb
+function::snapshot-if-necessary         1287f82135efdcc94af76dfa88029e4d
 function::state                         ef2051d9fe0684044d0f3df752e0c949
 function::touch                         3991b1b7c7187566f50e5e58ce01fa06
 function::unlock                        b4aac02f7f3fb700acf4acfd9b180ceb
@@ -1719,7 +1723,7 @@ internal_function::file::read           e647752332c8e05e81646a3ff98f9a8e
 internal_function::file::write          460e2343283eb9fd0e1815389f4e07e6
 internal_function::fnv_hash             c36d56f1e13a60ae427afc43ba025afc
 internal_function::hypothetically       b83e3f894a6df8623ccd370515dfd976
-internal_function::internal::main       4bd4381e1e63689984066485ae399f91
+internal_function::internal::main       6635b98bd1cc44c0dd4b2f2f2b5f05e6
 internal_function::invoke_editor_on     5eb976796f0ec172d6ec036116a2f41e
 internal_function::is_locked            da12ced6aa38295251f7e748ffd22925
 internal_function::namespace            784d2e96003550681a4ae02b8d6d0a27
@@ -1770,7 +1774,7 @@ __
 meta::parent('preprocessor', <<'__');
 function::preprocess           ab5526a02ff417d4c162357dc327e7c4
 meta::type::template           bc4b0c80b5efc716b19e99b832c22bf3
-parent::object                 8f920c8ec38cb39e732cbdcc3abc7f93
+parent::object                 0f0ac3b3f23a7d249803137357b0e598
 retriever::pp                  3b5f5c5d30c5a04f72056dedaacfe7b7
 template::comment              dfe273d2dad3d8159b847545e4e5c309
 template::eval                 1a0e2124a05056be4abc11803883c294
@@ -1787,7 +1791,7 @@ function::sdoc-packed     8ec4975fca7228708baae6ccd241bdbf
 function::sdocp           c3d738d982ba87418a298ff58478a85b
 meta::type::sdoc          22cd7315641d38c9d536344e83c36bed
 meta::type::slibrary      95474943c4a5f8ff17d3cf66ddb7c386
-parent::object            8f920c8ec38cb39e732cbdcc3abc7f93
+parent::object            0f0ac3b3f23a7d249803137357b0e598
 retriever::code-sdoc      03b87ff8d1ecf7594db9ca0669fc69a1
 retriever::html-sdoc      8ab7705d03276945b23a71677153233c
 retriever::markdown-sdoc  67c34ba8223ec36a3ae018e411354db2
