@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # 99aeabc9ec7fe80b1b39f5e53dc7e49e      <- self-modifying Perl magic
-# state:  570befba5e1a1244b6163e7be88af1c1
-# istate: 359381fa2713aba7f461b1065f0fa086
+# state:  2aa74316744ab09a561b03025f68d886
+# istate: 648e8913543a44ada994299a38c8f82c
 # id:     eabc6fd5b2359a34f31e9362a372f1bf
 
 # This is a self-modifying Perl file. I'm sorry you're viewing the source (it's
@@ -869,8 +869,14 @@ my $compressed = $$options{'--zip'}     || $$options{'-z'} ? '-z'  : '';
 my $verbose    = $$options{'--verbose'} || $$options{'-v'} ? '-v'  : '';
 my $dry_run    = $$options{'--dry-run'} || $$options{'-n'} ? '-nv' : '';
 
-terminal::info("@quoted -> $$options{'--to'}");
-sh("rsync -aux $verbose $dry_run $delete $compressed $_/ $$options{'--to'}:$_") for @quoted;
+my $nice_level   = $$options{'--nice'}   // 10;
+my $ionice_level = $$options{'--ionice'} // 3;
+
+my $rsync_options = "-aux $verbose $dry_run $delete $compressed";
+my $niceness      = "nice --adjustment=$nice_level ionice -c $ionice_level";
+
+terminal::info("@quoted -> $$options{'--to'} [$rsync_options]");
+sh("$niceness rsync $rsync_options $_/ $$options{'--to'}:$_") for @quoted;
 
 __
 meta::function('save', <<'__');
