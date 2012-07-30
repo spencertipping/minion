@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # 99aeabc9ec7fe80b1b39f5e53dc7e49e      <- self-modifying Perl magic
-# state:  2aa74316744ab09a561b03025f68d886
-# istate: 648e8913543a44ada994299a38c8f82c
+# state:  d39fe90ed62c8844091529c83f2e2b34
+# istate: c5c8a1b6ebd6d0d313b24d9b1ab6e24e
 # id:     eabc6fd5b2359a34f31e9362a372f1bf
 
 # This is a self-modifying Perl file. I'm sorry you're viewing the source (it's
@@ -750,7 +750,7 @@ $name =~ s/^.*\///;
 $name;
 __
 meta::function('pacman-package-set', <<'__');
-my @lines = split /\n/, join '', qx|pacman -Qet|;
+my @lines = split /\n/, join '', qx|pacman -Qt|;
 s/\s.*// for @lines;
 @lines;
 
@@ -2015,9 +2015,9 @@ disable();
 
 __
 meta::task('yaourt-sync', <<'__');
-my ($host)          = @_;
-my @local_packages  = pacman_package_set();
-my @remote_packages = grep length, split /\n/, join '', qx|ssh $host './minion pacman-package-set'|;
+my ($options, $host) = separate_options(@_);
+my @local_packages   = pacman_package_set();
+my @remote_packages  = grep length, split /\n/, join '', qx|ssh $host './minion pacman-package-set'|;
 
 my %needed, %extra;
 ++$needed{$_}, --$extra{$_} for @local_packages;
@@ -2028,7 +2028,7 @@ my @extra  = grep $extra{$_}  > 0, sort @remote_packages;
 terminal::info("$host needs the following: @needed");
 terminal::info("$host has the following extra packages: @extra");
 
-my $hostname = hostname();
+my $hostname = hostname() . ($$options{'--hostname-suffix'} // '');
 my $username = username();
 
 # Alphabetic ordering of the following is significant.
