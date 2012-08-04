@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # 99aeabc9ec7fe80b1b39f5e53dc7e49e      <- self-modifying Perl magic
-# state:  d39fe90ed62c8844091529c83f2e2b34
-# istate: c5c8a1b6ebd6d0d313b24d9b1ab6e24e
+# state:  6e14efa67c361d5bd11f58026d158650
+# istate: 5b29367a3a4d5a40d43276978bcca3a6
 # id:     eabc6fd5b2359a34f31e9362a372f1bf
 
 # This is a self-modifying Perl file. I'm sorry you're viewing the source (it's
@@ -872,11 +872,13 @@ my $dry_run    = $$options{'--dry-run'} || $$options{'-n'} ? '-nv' : '';
 my $nice_level   = $$options{'--nice'}   // 10;
 my $ionice_level = $$options{'--ionice'} // 3;
 
-my $rsync_options = "-aux $verbose $dry_run $delete $compressed";
 my $niceness      = "nice --adjustment=$nice_level ionice -c $ionice_level";
+my $rsync_options = join ' ', grep length, '-aux', $verbose, $dry_run,
+                                                   $delete, $compressed;
 
 terminal::info("@quoted -> $$options{'--to'} [$rsync_options]");
-sh("$niceness rsync $rsync_options $_/ $$options{'--to'}:$_") for @quoted;
+sh(qq|ssh $$options{'--to'} "mkdir -p '$_'" &&
+      $niceness rsync $rsync_options $_/ $$options{'--to'}:$_|) for @quoted;
 
 __
 meta::function('save', <<'__');
