@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # 99aeabc9ec7fe80b1b39f5e53dc7e49e      <- self-modifying Perl magic
-# state:  260b86b4d1b31006684459377d9dc14e
-# istate: 3f4c1519a20c7ea0ef50025bd07398bc
+# state:  2f0d60488af70a21696b7ad6e8bb7342
+# istate: 3ae4e0345c692ca6342a24884c911072
 # id:     eabc6fd5b2359a34f31e9362a372f1bf
 
 # This is a self-modifying Perl file. I'm sorry you're viewing the source (it's
@@ -1824,7 +1824,8 @@ with_exported("data::$list", sub {
 
 __
 meta::task('dpkg-intern', <<'__');
-associate('data::dpkg-list', qx|dpkg --get-selections|);
+associate('data::dpkg-list', join '', qx|dpkg --get-selections|);
+'';
 
 __
 meta::task('each-machine', <<'__');
