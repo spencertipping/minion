@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # 99aeabc9ec7fe80b1b39f5e53dc7e49e      <- self-modifying Perl magic
-# state:  dd184aa2a8164fc2862ad8f7ead22b35
-# istate: 7f8c5f5e546e730f79e8541b05f7a1a7
+# state:  c19a9e6f87208f1ed1ac16da101d559a
+# istate: 1a0e36c9ba0c05498914f50d5c0ea542
 # id:     eabc6fd5b2359a34f31e9362a372f1bf
 
 # This is a self-modifying Perl file. I'm sorry you're viewing the source (it's
@@ -1918,6 +1918,22 @@ __
 meta::retriever('sdocp', <<'__');
 return undef unless $_[0] =~ /^sdocp::(.*)$/;
 exists $data{"sdoc::$1"} ? sdocp("sdoc::$1") : undef;
+
+__
+meta::task('dpkg', <<'__');
+# Reads dpkg selections and applies them. You'll need to run this function as
+# root.
+my ($options, $list) = separate_options(@_);
+$list ||= 'dpkg-list';
+with_exported("data::$list", sub {
+  my ($dpkg) = @_;
+  sh("dselect update");
+  sh("dpkg --set-selections < $dpkg");
+  sh("dselect install")});
+
+__
+meta::task('dpkg-intern', <<'__');
+associate('data::dpkg-list', qx|dpkg --get-selections|);
 
 __
 meta::task('each-machine', <<'__');
