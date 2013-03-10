@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # 99aeabc9ec7fe80b1b39f5e53dc7e49e      <- self-modifying Perl magic
-# state:  2f0d60488af70a21696b7ad6e8bb7342
-# istate: 3ae4e0345c692ca6342a24884c911072
+# state:  b4c7cddfbd8fcc09707044e76b31f13c
+# istate: b227b4dca0ee90bcc88869515cf66cee
 # id:     eabc6fd5b2359a34f31e9362a372f1bf
 
 # This is a self-modifying Perl file. I'm sorry you're viewing the source (it's
@@ -1818,9 +1818,9 @@ my ($options, $list) = separate_options(@_);
 $list ||= 'dpkg-list';
 with_exported("data::$list", sub {
   my ($dpkg) = @_;
-  sh("dselect update");
   sh("dpkg --set-selections < $dpkg");
-  sh("dselect install")});
+  sh("apt-get update");
+  sh("apt-get dselect-upgrade")});
 
 __
 meta::task('dpkg-intern', <<'__');
