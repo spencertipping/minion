@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # 99aeabc9ec7fe80b1b39f5e53dc7e49e      <- self-modifying Perl magic
-# state:  b4c7cddfbd8fcc09707044e76b31f13c
-# istate: b227b4dca0ee90bcc88869515cf66cee
+# state:  31039674ef9844a80c82fdbb3e29ace9
+# istate: 93852912e05ac32971dcea13f48b7dcd
 # id:     eabc6fd5b2359a34f31e9362a372f1bf
 
 # This is a self-modifying Perl file. I'm sorry you're viewing the source (it's
@@ -815,7 +815,7 @@ die 'must specify a destination host using --to' unless $$options{'--to'};
 my @quoted = map "'$_'", grep s/'/\\'/g || 1, @directories;
 my $delete     = $$options{'--delete'} ? '--delete' : '';
 my $compressed = $$options{'--zip'}     || $$options{'-z'} ? '-z'  : '';
-my $verbose    = $$options{'--verbose'} || $$options{'-v'} ? '-v'  : '';
+my $verbose    = $$options{'--verbose'} || $$options{'-v'} ? '-vP' : '';
 my $dry_run    = $$options{'--dry-run'} || $$options{'-n'} ? '-nv' : '';
 
 my $nice_level   = $$options{'--nice'}   // 10;
