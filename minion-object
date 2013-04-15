@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # 99aeabc9ec7fe80b1b39f5e53dc7e49e      <- self-modifying Perl magic
-# state:  31039674ef9844a80c82fdbb3e29ace9
-# istate: 93852912e05ac32971dcea13f48b7dcd
+# state:  59cf3dfe077fad6ff24f852b339d5c5f
+# istate: 852f08119ad087e81f745bb360670ee9
 # id:     eabc6fd5b2359a34f31e9362a372f1bf
 
 # This is a self-modifying Perl file. I'm sorry you're viewing the source (it's
@@ -1821,6 +1821,14 @@ with_exported("data::$list", sub {
   sh("dpkg --set-selections < $dpkg");
   sh("apt-get update");
   sh("apt-get dselect-upgrade")});
+
+__
+meta::task('dpkg-download', <<'__');
+# Downloads apt cache from another machine. We can't infer the username because
+# this will be run as root.
+my ($host) = @_;
+my $username = retrieve('data::user') // die 'must specify data::user';
+sh("rsync -auP $username\@$host:/var/cache/apt/archives /var/cache/apt/");
 
 __
 meta::task('dpkg-intern', <<'__');
