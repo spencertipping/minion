@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # 99aeabc9ec7fe80b1b39f5e53dc7e49e      <- self-modifying Perl magic
-# state:  2ab50c8be51994b04a56fdc4574a13c3
-# istate: 852f08119ad087e81f745bb360670ee9
+# state:  f1ea5d9885b9bc685143f25bf7c46e95
+# istate: 0887112410e2f158947c275c0ffb95cc
 # id:     eabc6fd5b2359a34f31e9362a372f1bf
 
 # This is a self-modifying Perl file. I'm sorry you're viewing the source (it's
@@ -1840,7 +1840,7 @@ meta::task('each-machine', <<'__');
 # Usage: each-machine 'command'
 # Prefixes the output with the machine name in blue.
 
-sh("ssh $_ /bin/true >& /dev/null &&
+sh("ssh $_ /bin/true > /dev/null 2>&1 &&
     echo -n '\033[1;34m$_\033[0;0m\033[20G' && ssh $_ '@_'")
 for hosts('!no-ssh');
 
@@ -1855,25 +1855,25 @@ my %hosts = hosts();
 print "\033[20Gdns\033[38Gmdns\033[56Gping\033[62Gssh\n";
 
 sh("echo -n '\033[1;34m$_\033[0;0m'"),
-sh(qq+host $_ >& /dev/null &&
+sh(qq+host $_ > /dev/null 2>&1 &&
       echo -n '\033[20G\033[1;32m' &&
         (host $_ | awk '{print \$4}' | tr -d '\\n') &&
       echo -n '\033[0;0m' ||
       echo -n '\033[20Gnone'+),
 
-sh(qq+avahi-resolve -n $_ >& /dev/null &&
+sh(qq+avahi-resolve -n $_ > /dev/null 2>&1 &&
       echo -n '\033[38G\033[1;32m' &&
         (avahi-resolve -n $_ | awk '{print \$2}' | tr -d '\\n') &&
       echo -n '\033[0;0m' ||
       echo -n '\033[38Gnone'+),
 
-sh(qq+ping -c 1 $_ >& /dev/null &&
+sh(qq+ping -c 1 $_ > /dev/null 2>&1 &&
       echo -n '\033[56G\033[1;32mup\033[0;0m' ||
       echo -n '\033[56Gdown'+),
 
 $hosts{$_}{'no-ssh'}
   ? sh("echo '\033[62G\033[1;33mdisabled\033[0;0m'")
-  : sh(qq+ssh $_ /bin/true >& /dev/null &&
+  : sh(qq+ssh $_ /bin/true > /dev/null 2>&1 &&
           echo '\033[62G\033[1;32mup\033[0;0m' ||
           echo '\033[62Gdown'+)
 
